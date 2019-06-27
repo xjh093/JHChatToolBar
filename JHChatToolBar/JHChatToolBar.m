@@ -85,14 +85,28 @@ static CGFloat JHChatToolBar_iPhoneX_bottomH;
 {
     BOOL result = [super endEditing:force];
     
-    if (!_textView.hidden &&
-        ![_textView isFirstResponder]) {
+    if ([_textView isFirstResponder]) {
+        [_textView resignFirstResponder];
+    }else{
         for (UIButton *button in _rightItemView.subviews) {
             button.selected = NO;
         }
-        [_textView becomeFirstResponder];
+        
+        [UIView animateWithDuration:0.25 delay:0 options:(7 << 16 | UIViewAnimationOptionBeginFromCurrentState) animations:^{
+            CGRect frame = self.frame;
+            frame.origin.y = CGRectGetMaxY(self.superview.frame) - CGRectGetHeight(_toolBarView.frame);
+            self.frame = frame;
+            
+            [self frameDidChanged];
+        } completion:^(BOOL finished) {
+            [_accessoryView removeFromSuperview];
+            _accessoryView = nil;
+            
+            CGRect frame = self.frame;
+            frame.size.height = CGRectGetHeight(_toolBarView.frame);
+            self.frame = frame;
+        }];
     }
-    [_textView resignFirstResponder];
     
     return result;
 }
@@ -306,8 +320,8 @@ static CGFloat JHChatToolBar_iPhoneX_bottomH;
     if (contentH < _minTextViewHeight) {
         contentH = _minTextViewHeight;
     }
-    if (contentH > _maxTextViewHeight) {
-        contentH = _maxTextViewHeight;
+    if (contentH > _maxTextViewHeight + 2) {
+        contentH = _maxTextViewHeight + 2;
     }else{
         [_textView setContentOffset:CGPointZero animated:YES];
     }
@@ -515,6 +529,43 @@ static CGFloat JHChatToolBar_iPhoneX_bottomH;
     }
 }
 
+#pragma mark --- 更多视图菜单按钮点击事件
+- (void)clickMoreViewMenu:(UIButton *)button
+{
+    if (_delegate && [_delegate respondsToSelector:@selector(chatToolBar:didClickMoreViewMenu:)]) {
+        [_delegate chatToolBar:self didClickMoreViewMenu:button];
+    }
+}
+
+#pragma mark --- 插入Emoji
+- (void)insertEmoji:(NSString *)text
+{
+    if ([text isEqualToString:@"[删除]"]) {
+        if (_textView.text.length == 0) {
+            return;
+        }
+        
+        NSRange range = _textView.selectedRange;
+        range.location -= 1;
+        range.length = 1;
+        NSString *s = [_textView.text substringWithRange:range];
+        if ([s isEqualToString:@"]"]) {
+            while (![s isEqualToString:@"["]) {
+                [_textView deleteBackward];
+                NSRange range = _textView.selectedRange;
+                range.location -= 1;
+                range.length = 1;
+                s = [_textView.text substringWithRange:range];
+            }
+        }
+        [_textView deleteBackward];
+    }else{
+        [self insertText:text];
+        CGFloat contentH = ceilf([_textView sizeThatFits:_textView.frame.size].height);
+        [_textView setContentOffset:CGPointMake(0, contentH-CGRectGetHeight(_textView.frame)) animated:YES];
+    }
+}
+
 #pragma mark - public
 
 #pragma mark --- 插入文本
@@ -642,8 +693,9 @@ static CGFloat JHChatToolBar_iPhoneX_bottomH;
             [button1 setTitle:@"拍照" forState:0];
             [button1 setTitleColor:[UIColor blackColor] forState:0];
             [button1 setImage:nil forState:0];
-            [button1 jh_handleEvent:1<<6 inTarget:self block:^(id  _Nonnull target, id  _Nonnull sender) {
+            [button1 jh_handleEvent:1<<6 inTarget:self block:^(JHChatToolBar *target, id  _Nonnull sender) {
                 NSLog(@"拍照");
+                [target clickMoreViewMenu:sender];
             }];
             [view addSubview:button1];
             
@@ -654,10 +706,24 @@ static CGFloat JHChatToolBar_iPhoneX_bottomH;
             [button2 setTitle:@"红包" forState:0];
             [button2 setTitleColor:[UIColor blackColor] forState:0];
             [button2 setImage:nil forState:0];
-            [button2 jh_handleEvent:1<<6 inTarget:self block:^(id  _Nonnull target, id  _Nonnull sender) {
+            [button2 jh_handleEvent:1<<6 inTarget:self block:^(JHChatToolBar *target, id  _Nonnull sender) {
                 NSLog(@"红包");
+                [target clickMoreViewMenu:sender];
             }];
             [view addSubview:button2];
+            
+            UIButton *button3 = [UIButton buttonWithType:UIButtonTypeCustom];
+            button3.frame = CGRectMake(150, 50, 60, 60);
+            button3.backgroundColor = [UIColor brownColor];
+            button3.titleLabel.font = [UIFont systemFontOfSize:16];
+            [button3 setTitle:@"图片" forState:0];
+            [button3 setTitleColor:[UIColor blackColor] forState:0];
+            [button3 setImage:nil forState:0];
+            [button3 jh_handleEvent:1<<6 inTarget:self block:^(JHChatToolBar *target, id  _Nonnull sender) {
+                NSLog(@"图片");
+                [target clickMoreViewMenu:sender];
+            }];
+            [view addSubview:button3];
             
             view;
         });
@@ -677,9 +743,7 @@ static CGFloat JHChatToolBar_iPhoneX_bottomH;
             emojiPad.autoresizingMask = UIViewAutoresizingFlexibleTopMargin;
             emojiPad.emojiClickBlock = ^(NSString *face, NSString *text) {
                 NSLog(@"表情图片：%@，表情内容：%@",face,text);
-                [ws insertText:text];
-                CGFloat contentH = ceilf([ws.textView sizeThatFits:ws.textView.frame.size].height);
-                [ws.textView setContentOffset:CGPointMake(0, contentH-CGRectGetHeight(ws.textView.frame)) animated:YES];
+                [ws insertEmoji:text];
             };
             emojiPad;
         });
