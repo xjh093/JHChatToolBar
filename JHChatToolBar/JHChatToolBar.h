@@ -78,5 +78,7 @@
 - (void)insertText:(NSString *)text;
 /// 删除文本
 - (void)deleteText;
+/// 恢复初始状态
+- (BOOL)endEditing:(BOOL)force;
 
 @end
