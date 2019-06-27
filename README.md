@@ -15,7 +15,7 @@
 ---
 
 # Todo
-- 1.emoji delete event.
+- 1.emoji delete event. ✅2019-6-27
 - 2.custom emoji view.
 - 3.custom more view.
 
