@@ -13,10 +13,3 @@
 ![image](https://github.com/xjh093/JHChatToolBar/blob/master/image/4.png)
 
 ---
-
-# Todo
-- 1.emoji delete event.
-- 2.custom emoji view.
-- 3.custom more view.
-
----
